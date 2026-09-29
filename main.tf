@@ -1,5 +1,5 @@
 #################### Database ####################
-resource "aws_dynamodb_table" "url_shortener_links" {
+resource "aws_dynamodb_table" "links" {
   name         = "url-shortener-links"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "short_code"
@@ -23,21 +23,21 @@ data "aws_iam_policy_document" "lambda_assume_role" {
   }
 }
 
-resource "aws_iam_role" "url_shortener_lambda_role" {
+resource "aws_iam_role" "lambda" {
   name               = "url-shortener-lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
 }
 
-data "aws_iam_policy_document" "url_shortener_lambda_role_policy_document" {
+data "aws_iam_policy_document" "lambda_dynamodb" {
   statement {
     effect    = "Allow"
     actions   = ["dynamodb:GetItem", "dynamodb:PutItem"]
-    resources = [aws_dynamodb_table.url_shortener_links.arn]
+    resources = [aws_dynamodb_table.links.arn]
   }
 }
 
-resource "aws_iam_role_policy" "url_shortener_lambda_policy" {
+resource "aws_iam_role_policy" "lambda_dynamodb" {
   name   = "lambda-policy"
-  role   = aws_iam_role.url_shortener_lambda_role.id
-  policy = data.aws_iam_policy_document.url_shortener_lambda_role_policy_document.json
+  role   = aws_iam_role.lambda.id
+  policy = data.aws_iam_policy_document.lambda_dynamodb.json
 }
