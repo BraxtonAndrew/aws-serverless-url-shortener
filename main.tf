@@ -37,7 +37,12 @@ data "aws_iam_policy_document" "lambda_dynamodb" {
 }
 
 resource "aws_iam_role_policy" "lambda_dynamodb" {
-  name   = "lambda-policy"
+  name   = "dynamodb-access"
   role   = aws_iam_role.lambda.id
   policy = data.aws_iam_policy_document.lambda_dynamodb.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
