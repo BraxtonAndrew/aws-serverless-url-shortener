@@ -46,3 +46,27 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
+#################### Lambda ####################
+data "archive_file" "lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambda"
+  output_path = "${path.module}/lambda.zip"
+}
+
+resource "aws_lambda_function" "url_shortener" {
+  function_name = "url-shortener"
+  role          = aws_iam_role.lambda.arn
+  runtime       = "python3.13"
+  handler       = "app.lambda_handler"
+
+  filename         = data.archive_file.lambda.output_path
+  source_code_hash = data.archive_file.lambda.output_base64sha256
+
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.links.name
+    }
+  }
+}
+
