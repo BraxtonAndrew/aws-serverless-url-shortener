@@ -10,10 +10,16 @@ table = boto3.resource("dynamodb").Table(table_name)
 ALPHABET = string.ascii_letters + string.digits
 
 
-# Example request
+# Example request to create the new url
 # event = {
 #    "routeKey": "POST /links",
 #    "body": "{\"url\": \"https://github.com\"}"
+#}
+
+# Example request to visit the new url
+#event = {
+#    "routeKey": "GET /{code}",
+#    "pathParameters": {"code": "SVAWpT"},
 #}
 
 
@@ -40,4 +46,12 @@ def create_link(event):
     return {"statusCode": 201, "body": json.dumps({"short_code": short_code})}
 
 def redirect(event):
-    return {"statusCode": 200, "body": json.dumps({"message": "redirect works"})}
+    short_code = event["pathParameters"]["code"]
+
+    response = table.get_item(Key={"short_code": short_code})
+
+    item = response.get("Item")
+    if item is None:
+        return {"statusCode": 404, "body": json.dumps({"message": "Not found"})}
+
+    return {"statusCode": 301, "headers": {"Location": item["long_url"]}}
