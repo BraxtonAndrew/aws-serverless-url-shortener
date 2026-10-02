@@ -1,16 +1,3 @@
-#################### Database ####################
-resource "aws_dynamodb_table" "links" {
-  name         = "url-shortener-links"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "short_code"
-
-  attribute {
-    name = "short_code"
-    type = "S"
-  }
-
-}
-
 #################### IAM ####################
 data "aws_iam_policy_document" "lambda_assume_role" {
   statement {
@@ -75,6 +62,18 @@ resource "aws_lambda_function" "url_shortener" {
     variables = {
       TABLE_NAME = aws_dynamodb_table.links.name
     }
+  }
+}
+
+#################### Database ####################
+resource "aws_dynamodb_table" "links" {
+  name         = "url-shortener-links"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "short_code"
+
+  attribute {
+    name = "short_code"
+    type = "S"
   }
 }
 
