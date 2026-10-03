@@ -11,13 +11,13 @@ table = boto3.resource("dynamodb").Table(table_name)
 ALPHABET = string.ascii_letters + string.digits
 
 
-# Example request to create the new url
+# Example POST request
 # event = {
 #    "routeKey": "POST /links",
 #    "body": "{\"url\": \"https://github.com\"}"
 #}
 
-# Example request to visit the new url
+# Example GET request
 #event = {
 #    "routeKey": "GET /{code}",
 #    "pathParameters": {"code": "SVAWpT"},
@@ -45,13 +45,22 @@ def create_link(event):
     except (ValueError, KeyError):
         return {"statusCode": 400, "body": json.dumps({"message": "Invalid request body"})}
 
-    short_code = ""
-    for _ in range(6):
-        short_code += secrets.choice(ALPHABET)
+    for attempt in range(5):
+        short_code = ""
+        for _ in range(6):
+            short_code += secrets.choice(ALPHABET)
 
-    table.put_item(Item={"short_code": short_code, "long_url": long_url})    
+        try:
+            table.put_item(
+                Item={"short_code": short_code, "long_url": long_url},
+                ConditionExpression="attribute_not_exists(short_code)",
+            )
+            return {"statusCode": 201, "body": json.dumps({"short_code": short_code})}
+        
+        except table.meta.client.exceptions.ConditionalCheckFailedException:
+            continue    
 
-    return {"statusCode": 201, "body": json.dumps({"short_code": short_code})}
+    return {"statusCode": 500, "body": json.dumps({"message": "Could not generate a unique code"})}
 
 def redirect(event):
     short_code = event["pathParameters"]["code"]
