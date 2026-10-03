@@ -3,6 +3,7 @@ import os
 import boto3
 import secrets
 import string
+import base64
 
 table_name = os.environ["TABLE_NAME"]
 table = boto3.resource("dynamodb").Table(table_name)
@@ -34,8 +35,15 @@ def lambda_handler(event, context):
         return {"statusCode": 404, "body": json.dumps({"message": "Not found"})}
 
 def create_link(event):
-    body = json.loads(event["body"])
-    long_url = body["url"]
+    try:
+        raw_body = event["body"]
+        if event.get("isBase64Encoded"):
+            raw_body = base64.b64decode(raw_body).decode("utf-8")
+
+        body = json.loads(raw_body)
+        long_url = body["url"]
+    except (ValueError, KeyError):
+        return {"statusCode": 400, "body": json.dumps({"message": "Invalid request body"})}
 
     short_code = ""
     for _ in range(6):
