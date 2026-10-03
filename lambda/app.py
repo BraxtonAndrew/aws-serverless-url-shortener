@@ -15,13 +15,13 @@ ALPHABET = string.ascii_letters + string.digits
 # event = {
 #    "routeKey": "POST /links",
 #    "body": "{\"url\": \"https://github.com\"}"
-#}
+# }
 
 # Example GET request
-#event = {
+# event = {
 #    "routeKey": "GET /{code}",
 #    "pathParameters": {"code": "SVAWpT"},
-#}
+# }
 
 
 def lambda_handler(event, context):
