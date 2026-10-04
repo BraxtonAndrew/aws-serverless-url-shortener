@@ -22,7 +22,7 @@ data "aws_iam_policy_document" "github_assume_role" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:BraxtonAndrew/aws-serverless-url-shortener:*"]
+      values = ["repo:BraxtonAndrew@52250606/aws-serverless-url-shortener@1393658568:*"]
     }
   }
 }
