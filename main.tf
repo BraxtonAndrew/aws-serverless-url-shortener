@@ -34,6 +34,11 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_xray" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -69,6 +74,10 @@ resource "aws_lambda_function" "url_shortener" {
       TABLE_NAME = aws_dynamodb_table.links.name
     }
   }
+
+  tracing_config {
+    mode = "Active"
+  }
 }
 
 #################### Database ####################
@@ -82,6 +91,10 @@ resource "aws_dynamodb_table" "links" {
   attribute {
     name = "short_code"
     type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
   }
 }
 

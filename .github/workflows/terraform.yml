@@ -49,7 +49,6 @@ jobs:
         with:
           directory: .
           framework: terraform
-          soft_fail: true
           output_format: cli
           quiet: true
 
