@@ -44,6 +44,13 @@ jobs:
           tflint --init
           tflint --recursive
 
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: true
+
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
         run: terraform plan
