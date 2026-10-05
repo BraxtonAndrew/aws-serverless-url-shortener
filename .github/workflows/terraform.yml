@@ -50,6 +50,8 @@ jobs:
           directory: .
           framework: terraform
           soft_fail: true
+          output_format: cli
+          quiet: true
 
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
