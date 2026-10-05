@@ -50,6 +50,12 @@ data "archive_file" "lambda" {
 }
 
 resource "aws_lambda_function" "url_shortener" {
+  #checkov:skip=CKV_AWS_115:Account concurrency limit is 10 and AWS requires 10 unreserved; API Gateway throttling caps traffic instead
+  #checkov:skip=CKV_AWS_116:DLQs only apply to async invocations; API Gateway invokes synchronously and errors return to the caller
+  #checkov:skip=CKV_AWS_117:Only calls the public DynamoDB endpoint; a VPC would add NAT cost with no security benefit
+  #checkov:skip=CKV_AWS_272:Code signing is out of scope; the OIDC-restricted pipeline is the only deploy path
+  #checkov:skip=CKV_AWS_173:Env vars hold no secrets (table name only) and are encrypted at rest with an AWS-managed key
+
   function_name = "url-shortener"
   role          = aws_iam_role.lambda.arn
   runtime       = "python3.13"
@@ -67,6 +73,8 @@ resource "aws_lambda_function" "url_shortener" {
 
 #################### Database ####################
 resource "aws_dynamodb_table" "links" {
+  #checkov:skip=CKV_AWS_119:Encrypted at rest by default with an AWS-owned key; data is public URLs, so a customer-managed key adds cost without benefit
+
   name         = "url-shortener-links"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "short_code"
@@ -84,6 +92,8 @@ resource "aws_apigatewayv2_api" "http" {
 }
 
 resource "aws_apigatewayv2_stage" "default" {
+  #checkov:skip=CKV_AWS_76:TODO Phase 4 - access logging will be added with the monitoring work
+
   api_id      = aws_apigatewayv2_api.http.id
   name        = "$default"
   auto_deploy = true
@@ -102,12 +112,16 @@ resource "aws_apigatewayv2_integration" "lambda" {
 }
 
 resource "aws_apigatewayv2_route" "create_link" {
+  #checkov:skip=CKV_AWS_309:Public by design for this demo; throttled at the stage. Future improvement: add a JWT authorizer to POST /links
+
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "POST /links"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "redirect" {
+  #checkov:skip=CKV_AWS_309:Redirect must be publicly accessible; that is the core function of a URL shortener
+
   api_id    = aws_apigatewayv2_api.http.id
   route_key = "GET /{code}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
