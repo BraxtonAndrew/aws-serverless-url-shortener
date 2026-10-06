@@ -15,4 +15,27 @@ def test_unknown_route_returns_404():
 
 
 
-def test_create_link_returns_201():
+def test_create_link_returns_201(monkeypatch):
+    fake_table = MagicMock()
+    monkeypatch.setattr(app, "table", fake_table)
+
+    event = {
+        "routeKey": "POST /links",
+        "body": json.dumps({"url": "https://github.com"})
+    }
+
+    response = app.lambda_handler(event, None)
+
+    assert response["statusCode"] == 201
+    fake_table.put_item.assert_called_once()
+
+
+def test_create_link_invalid_body_returns_400():
+    event = {
+        "routeKey": "POST /links",
+        "body": "banana"
+    }
+
+    response = app.lambda_handler(event, None)
+
+    assert response["statusCode"] == 400

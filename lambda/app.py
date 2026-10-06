@@ -36,14 +36,14 @@ def lambda_handler(event, context):
 
 def create_link(event):
     try:
-        raw_body = event["body"]
-        if event.get("isBase64Encoded"):
-            raw_body = base64.b64decode(raw_body).decode("utf-8")
+        raw_body = event["body"] # 1. grab the body text
+        if event.get("isBase64Encoded"): # 2. did API gateway encode it?
+            raw_body = base64.b64decode(raw_body).decode("utf-8") # if so, decode it
 
-        body = json.loads(raw_body)
-        long_url = body["url"]
+        body = json.loads(raw_body) # 3. parse text -> dict
+        long_url = body["url"] # 4. pull out the URL
     except (ValueError, KeyError):
-        return {"statusCode": 400, "body": json.dumps({"message": "Invalid request body"})}
+        return {"statusCode": 400, "body": json.dumps({"message": "Invalid request body"})} # ANY failure above -> 400, exit
 
     for attempt in range(5):
         short_code = ""
