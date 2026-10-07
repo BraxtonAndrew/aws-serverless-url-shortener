@@ -43,3 +43,7 @@ terraform.rc
 # Uncomment the line below if you want to ignore planout files.
 # planout
 *.zip
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
