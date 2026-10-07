@@ -39,3 +39,35 @@ def test_create_link_invalid_body_returns_400():
     response = app.lambda_handler(event, None)
 
     assert response["statusCode"] == 400
+
+
+def test_redirect_existing_code_returns_301(monkeypatch):
+    fake_table = MagicMock()
+    fake_table.get_item.return_value = {"Item": {"short_code": "abc123", "long_url": "https://github.com"}}
+    monkeypatch.setattr(app, "table", fake_table)
+
+    event = {
+        "routeKey": "GET /{code}",
+        "pathParameters": {"code": "abc123"}
+    }
+
+    response = app.lambda_handler(event, None)
+
+    assert response["statusCode"] == 301
+    assert response["headers"]["Location"] == "https://github.com" #might be long_url instead of Location tho
+
+
+def test_redirect_missing_code_returns_404(monkeypatch):
+    fake_table = MagicMock()
+    fake_table.get_item.return_value = {}
+    monkeypatch.setattr(app, "table", fake_table)
+
+    event = {
+        "routeKey": "GET /{code}",
+        "pathParameters": {"code": "abc123"}
+    }
+
+    response = app.lambda_handler(event, None)
+
+    assert response["statusCode"] == 404
+    
