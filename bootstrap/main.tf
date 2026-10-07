@@ -66,6 +66,16 @@ data "aws_iam_policy_document" "github_actions_permissions" {
       "arn:aws:apigateway:us-east-1::/tags/*"
     ]
   }
+
+  statement {
+    actions = ["sns:*"]
+    resources = ["arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:topics/url-shortener-*"]
+  }
+
+  statement {
+    actions = ["cloudwatch:*"]
+    resources = ["arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarms/url-shortener-*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions" {
