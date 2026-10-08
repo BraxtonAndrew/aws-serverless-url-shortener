@@ -68,13 +68,32 @@ data "aws_iam_policy_document" "github_actions_permissions" {
   }
 
   statement {
-    actions = ["sns:*"]
-    resources = ["arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:topics/url-shortener-*"]
+    actions   = ["sns:*"]
+    resources = ["arn:aws:sns:us-east-1:${data.aws_caller_identity.current.account_id}:url-shortener-*"]
   }
 
   statement {
-    actions = ["cloudwatch:*"]
-    resources = ["arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarms/url-shortener-*"]
+    actions   = ["cloudwatch:*"]
+    resources = ["arn:aws:cloudwatch:us-east-1:${data.aws_caller_identity.current.account_id}:alarm:url-shortener-*"]
+  }
+
+  statement {
+    actions   = ["logs:*"]
+    resources = ["arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/apigateway/url-shortener*"]
+  }
+
+  statement {
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:CreateLogDelivery",
+      "logs:GetLogDelivery",
+      "logs:UpdateLogDelivery",
+      "logs:DeleteLogDelivery",
+      "logs:ListLogDeliveries",
+      "logs:PutResourcePolicy",
+      "logs:DescribeResourcePolicies",
+    ]
+    resources = ["*"]
   }
 }
 
