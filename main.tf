@@ -177,6 +177,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   comparison_operator = "GreaterThanThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "notBreaching"
+  ok_actions = [aws_sns_topic.alerts.arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
@@ -191,6 +192,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   comparison_operator = "GreaterThanThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "notBreaching"
+  ok_actions = [aws_sns_topic.alerts.arn]
 }
 
 resource "aws_cloudwatch_log_group" "api_access" {
