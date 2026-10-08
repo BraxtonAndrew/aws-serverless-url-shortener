@@ -1,5 +1,5 @@
 output "table_name" {
-  value = aws_dynamodb_table.links.name
+  value = module.dynamodb.table_name
 }
 
 output "lambda_function_name" {

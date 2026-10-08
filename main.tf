@@ -19,7 +19,7 @@ data "aws_iam_policy_document" "lambda_dynamodb" {
   statement {
     effect    = "Allow"
     actions   = ["dynamodb:GetItem", "dynamodb:PutItem"]
-    resources = [aws_dynamodb_table.links.arn]
+    resources = [module.dynamodb.table_arn]
   }
 }
 
@@ -71,7 +71,7 @@ resource "aws_lambda_function" "url_shortener" {
 
   environment {
     variables = {
-      TABLE_NAME = aws_dynamodb_table.links.name
+      TABLE_NAME = module.dynamodb.table_name
     }
   }
 
@@ -81,21 +81,14 @@ resource "aws_lambda_function" "url_shortener" {
 }
 
 #################### Database ####################
-resource "aws_dynamodb_table" "links" {
-  #checkov:skip=CKV_AWS_119:Encrypted at rest by default with an AWS-owned key; data is public URLs, so a customer-managed key adds cost without benefit
+module "dynamodb" {
+  source     = "./modules/dynamodb"
+  table_name = "url-shortener-links"
+}
 
-  name         = "url-shortener-links"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "short_code"
-
-  attribute {
-    name = "short_code"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
+moved {
+  from = aws_dynamodb_table.links
+  to   = module.dynamodb.aws_dynamodb_table.this
 }
 
 #################### API Gateway ####################
@@ -177,7 +170,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   comparison_operator = "GreaterThanThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "notBreaching"
-  ok_actions = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
@@ -192,7 +185,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   comparison_operator = "GreaterThanThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "notBreaching"
-  ok_actions = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
 resource "aws_cloudwatch_log_group" "api_access" {
