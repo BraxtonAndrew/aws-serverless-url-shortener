@@ -105,8 +105,6 @@ resource "aws_apigatewayv2_api" "http" {
 }
 
 resource "aws_apigatewayv2_stage" "default" {
-  #checkov:skip=CKV_AWS_76:TODO Phase 4 - access logging will be added with the monitoring work
-
   api_id      = aws_apigatewayv2_api.http.id
   name        = "$default"
   auto_deploy = true
@@ -114,6 +112,21 @@ resource "aws_apigatewayv2_stage" "default" {
   default_route_settings {
     throttling_rate_limit  = 5
     throttling_burst_limit = 10
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_access.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+      latency        = "$context.responseLatency"
+      integrationErr = "$context.integrationErrorMessage"
+    })
   }
 }
 
@@ -178,4 +191,11 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   comparison_operator = "GreaterThanThreshold"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "notBreaching"
+}
+
+resource "aws_cloudwatch_log_group" "api_access" {
+  #checkov:skip=CKV_AWS_158:CloudWatch Logs are already encrypted at rest by default.
+  #checkov:skip=CKV_AWS_338:Data minimization, access logs contain visitor's IP addresses which counts as personal data and I have no need to keep them for a long time
+  name              = "/aws/apigateway/url-shortener-access"
+  retention_in_days = 14
 }
