@@ -139,3 +139,43 @@ resource "aws_apigatewayv2_route" "redirect" {
   route_key = "GET /{code}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
+
+##################### Monitoring #####################
+resource "aws_sns_topic" "alerts" {
+  #checkov:skip=CKV_AWS_26:Free aws-managed SNS key can't be used by CloudWatch alarms
+  name = "url-shortener-alerts"
+}
+
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "url-shortener-lambda-errors"
+  namespace           = "AWS/Lambda"
+  metric_name         = "Errors"
+  dimensions          = { FunctionName = aws_lambda_function.url_shortener.function_name }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_5xx" {
+  alarm_name          = "url-shortener-api-5xx"
+  namespace           = "AWS/ApiGateway"
+  metric_name         = "5xx"
+  dimensions          = { ApiId = aws_apigatewayv2_api.http.id }
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  treat_missing_data  = "notBreaching"
+}
