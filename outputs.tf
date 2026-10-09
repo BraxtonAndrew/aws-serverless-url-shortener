@@ -7,5 +7,5 @@ output "lambda_function_name" {
 }
 
 output "api_url" {
-  value = aws_apigatewayv2_api.http.api_endpoint
+  value = module.api.api_endpoint
 }
