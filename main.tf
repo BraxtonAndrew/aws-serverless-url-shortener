@@ -1,83 +1,10 @@
 #################### IAM ####################
-data "aws_iam_policy_document" "lambda_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "lambda" {
-  name               = "url-shortener-lambda"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
-}
-
-data "aws_iam_policy_document" "lambda_dynamodb" {
-  statement {
-    effect    = "Allow"
-    actions   = ["dynamodb:GetItem", "dynamodb:PutItem"]
-    resources = [module.dynamodb.table_arn]
-  }
-}
-
-resource "aws_iam_role_policy" "lambda_dynamodb" {
-  name   = "dynamodb-access"
-  role   = aws_iam_role.lambda.id
-  policy = data.aws_iam_policy_document.lambda_dynamodb.json
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_xray" {
-  role       = aws_iam_role.lambda.name
-  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-}
-
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.url_shortener.function_name
+  function_name = module.lambda.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
-}
-
-#################### Lambda ####################
-data "archive_file" "lambda" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda"
-  output_path = "${path.module}/lambda.zip"
-}
-
-resource "aws_lambda_function" "url_shortener" {
-  #checkov:skip=CKV_AWS_115:Account concurrency limit is 10 and AWS requires 10 unreserved; API Gateway throttling caps traffic instead
-  #checkov:skip=CKV_AWS_116:DLQs only apply to async invocations; API Gateway invokes synchronously and errors return to the caller
-  #checkov:skip=CKV_AWS_117:Only calls the public DynamoDB endpoint; a VPC would add NAT cost with no security benefit
-  #checkov:skip=CKV_AWS_272:Code signing is out of scope; the OIDC-restricted pipeline is the only deploy path
-  #checkov:skip=CKV_AWS_173:Env vars hold no secrets (table name only) and are encrypted at rest with an AWS-managed key
-
-  function_name = "url-shortener"
-  role          = aws_iam_role.lambda.arn
-  runtime       = "python3.13"
-  handler       = "app.lambda_handler"
-
-  filename         = data.archive_file.lambda.output_path
-  source_code_hash = data.archive_file.lambda.output_base64sha256
-
-  environment {
-    variables = {
-      TABLE_NAME = module.dynamodb.table_name
-    }
-  }
-
-  tracing_config {
-    mode = "Active"
-  }
 }
 
 #################### Database ####################
@@ -89,6 +16,41 @@ module "dynamodb" {
 moved {
   from = aws_dynamodb_table.links
   to   = module.dynamodb.aws_dynamodb_table.this
+}
+
+#################### Lambda ####################
+module "lambda" {
+  source        = "./modules/lambda"
+  function_name = "url-shortener"
+  role_name     = "url-shortener-lambda"
+  source_dir    = "${path.module}/lambda"
+  table_name    = module.dynamodb.table_name
+  table_arn     = module.dynamodb.table_arn
+}
+
+moved {
+  from = aws_lambda_function.url_shortener
+  to   = module.lambda.aws_lambda_function.this
+}
+
+moved {
+  from = aws_iam_role.lambda
+  to   = module.lambda.aws_iam_role.this
+}
+
+moved {
+  from = aws_iam_role_policy.lambda_dynamodb
+  to   = module.lambda.aws_iam_role_policy.dynamodb
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.lambda_logs
+  to   = module.lambda.aws_iam_role_policy_attachment.logs
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.lambda_xray
+  to   = module.lambda.aws_iam_role_policy_attachment.xray
 }
 
 #################### API Gateway ####################
@@ -126,7 +88,7 @@ resource "aws_apigatewayv2_stage" "default" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id                 = aws_apigatewayv2_api.http.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.url_shortener.invoke_arn
+  integration_uri        = module.lambda.invoke_arn
   payload_format_version = "2.0"
 }
 
@@ -162,7 +124,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "url-shortener-lambda-errors"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
-  dimensions          = { FunctionName = aws_lambda_function.url_shortener.function_name }
+  dimensions          = { FunctionName = module.lambda.function_name }
   statistic           = "Sum"
   period              = 300
   evaluation_periods  = 1
