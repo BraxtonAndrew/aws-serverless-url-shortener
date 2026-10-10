@@ -25,7 +25,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
-  alarm_name          = "${var.alert_email}-api-5xx"
+  alarm_name          = "${var.name_prefix}-api-5xx"
   namespace           = "AWS/ApiGateway"
   metric_name         = "5xx"
   dimensions          = { ApiId = var.api_id }
